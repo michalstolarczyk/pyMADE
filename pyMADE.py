@@ -1,3 +1,15 @@
+#reading data for testing
+import pandas as pd
+
+
+df = pd.read_csv('/home/mstolarczyk/Uczelnia/UVA/pyMADE/testData.csv', header=None, index_col=0, names=['gene_name', 'logFC', 'p_value'],skiprows=1)
+logFC = df[['logFC']]
+p_value = df[['p_value']]
+
+fold_change = logFC
+pvals = p_value
+
+#actual function
 from cobra import __version__ as cobra_version
 
 def pyMADE(cobra_model, fold_change, pvals, gene_names, obj_frac=0.3, weighting="log", bounds=None, objs=None,
@@ -34,3 +46,24 @@ def pyMADE(cobra_model, fold_change, pvals, gene_names, obj_frac=0.3, weighting=
     :param round_states: If true (default), binary variables in GENE_STATES are rounded
     :return:
     """
+
+    # Arguments processing
+    if isinstance(transition_matrix, type(None)): #check if transition_matrix was provided
+        if isinstance(fold_change, pd.DataFrame): #check if the fold_change is an object of pandas.DataFrame class and convert it to on if needed
+            ntrans = fold_change.shape #get the number of transitions
+        else:
+            try:
+                fold_change = pd.DataFrame(fold_change)
+            except ValueError:
+                raise ValueError("The provided fold_change object cannot be converted to the object of pandas.DataFrame class.")
+            ntrans = fold_change.shape
+
+        ncond = ntrans + 1 #get the number of conditions
+    else:
+        try:
+            transition_matrix = pd.DataFrame(transition_matrix)
+            ntrans = transition_matrix.max
+            ncond = transition_matrix.shape[0]
+        except ValueError:
+            raise ValueError(
+                "The provided transition_matrix object cannot be converted to the object of pandas.DataFrame class.")
