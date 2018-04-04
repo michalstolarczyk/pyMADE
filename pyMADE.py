@@ -1,27 +1,29 @@
-#reading data for testing
+# reading data for testing
 import pandas as pd
 
-
-df = pd.read_csv('/home/mstolarczyk/Uczelnia/UVA/pyMADE/testData.csv', header=None, index_col=0, names=['gene_name', 'logFC', 'p_value'],skiprows=1)
+df = pd.read_csv('/home/mstolarczyk/Uczelnia/UVA/pyMADE/testData.csv', header=None, index_col=0,
+                 names=['gene_name', 'logFC', 'p_value'], skiprows=1)
 logFC = df[['logFC']]
 p_value = df[['p_value']]
 
 fold_change = logFC
 pvals = p_value
 
-#actual function
+# actual function
 from cobra import __version__ as cobra_version
 
+
 def pyMADE(cobra_model, fold_change, pvals, gene_names, obj_frac=0.3, weighting="log", bounds=None, objs=None,
-           p_thresh=0.5, p_eps=0.0000000001, transition_matrix=None, remove_rev=False, theoretical_match=True, log_fold_change=False, return_models=True, verbose=True, set_IntFeasTol=0.0000000001,
+           p_thresh=0.5, p_eps=0.0000000001, transition_matrix=None, remove_rev=False, theoretical_match=True,
+           log_fold_change=False, return_models=True, verbose=True, set_IntFeasTol=0.0000000001,
            weight_thresh=0.00000001, verify=True, round_states=True):
     """MADE: Metabolic Adjustment by Differential Expression.
 
 
 
     :param cobra_model: An object of cobra.Model class. pyMADE also accepts a list of models for each condition
-    :param fold_change: Measured fold change from expression data.  Columns correspond to conditions, rows correspond to genes.
-    :param pvals: P-values for changes.  Format is the same as for fold_change.
+    :param fold_change: An object of pandas.DataFrame class or object that can be converted to one. Measured fold change from expression data.  Columns correspond to conditions, rows correspond to genes.
+    :param pvals: An object of pandas.DataFrame class or object that can be converted to one. P-values for changes.  Format is the same as for fold_change.
     :param gene_names: Cell array of names for genes in expression dataset. These correspond to the rows in fold_change and pvals. If none is given, the rows correspond to cobra.Model.genes.
     :param obj_frac: Fraction of metabolic objective required in the resulting model (v_obj >= frac*v_obj_max). Default is 0.3.  Input can also be a vector giving a separate fraction for each condition.
     :param weighting:  Method to convert PVALS to weights.  Options include:
@@ -44,21 +46,23 @@ def pyMADE(cobra_model, fold_change, pvals, gene_names, obj_frac=0.3, weighting=
     :param weight_thresh: Threshold for weights on variables to be held constant.  MADE only attempts to keep variables constant if the weight from the P-value is above this value. (Default = 1e-8.)
     :param verify: If true (default), MADE checks that the generated models are feasible for the objective flux fraction.
     :param round_states: If true (default), binary variables in GENE_STATES are rounded
-    :return:
+    :return:m
     """
 
     # Arguments processing
-    if isinstance(transition_matrix, type(None)): #check if transition_matrix was provided
-        if isinstance(fold_change, pd.DataFrame): #check if the fold_change is an object of pandas.DataFrame class and convert it to on if needed
-            ntrans = fold_change.shape #get the number of transitions
+    if isinstance(transition_matrix, type(None)):  # check if transition_matrix was provided
+        if isinstance(fold_change,
+                      pd.DataFrame):  # check if the fold_change is an object of pandas.DataFrame class and convert it to on if needed
+            ntrans = fold_change.shape  # get the number of transitions
         else:
             try:
                 fold_change = pd.DataFrame(fold_change)
             except ValueError:
-                raise ValueError("The provided fold_change object cannot be converted to the object of pandas.DataFrame class.")
+                raise ValueError(
+                    "The provided fold_change object cannot be converted to the object of pandas.DataFrame class.")
             ntrans = fold_change.shape
 
-        ncond = ntrans + 1 #get the number of conditions
+        ncond = ntrans + 1  # get the number of conditions
     else:
         try:
             transition_matrix = pd.DataFrame(transition_matrix)
@@ -67,3 +71,13 @@ def pyMADE(cobra_model, fold_change, pvals, gene_names, obj_frac=0.3, weighting=
         except ValueError:
             raise ValueError(
                 "The provided transition_matrix object cannot be converted to the object of pandas.DataFrame class.")
+    if isinstance(pvals,
+                  pd.DataFrame):  # check if the fold_change is an object of pandas.DataFrame class and convert it to on if needed
+        assert pvals.shape == fold_change.shape, "fold_change and pavals must have the same dimensions."
+    else:
+        try:
+            pvals = pd.DataFrame(pvals)
+        except ValueError:
+            raise ValueError(
+                "The provided pvals object cannot be converted to the object of pandas.DataFrame class.")
+
