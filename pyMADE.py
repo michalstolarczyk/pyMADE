@@ -1,6 +1,9 @@
 # reading data for testing
-import pandas as pd
+from cobra
 import numpy as np
+import pandas as pd
+
+
 
 df = pd.read_csv('/home/mstolarczyk/Uczelnia/UVA/pyMADE/testData.csv', header=None, index_col=0,
                  names=['gene_name', 'logFC', 'p_value'], skiprows=1)
@@ -11,18 +14,18 @@ fold_change = logFC
 pvals = p_value
 
 # actual function
-from cobra import __version__ as cobra_version
+import cobra
+import numpy as np
+import pandas as pd
 
-
-def pyMADE(cobra_model, fold_change, pvals=None, gene_names, obj_frac=0.3, weighting="log", bounds=None, objs=None,
+def pyMADE(cobra_model, fold_change, gene_names, pvals=None, obj_frac=0.3, weighting="log", bounds=None, objs=None,
            p_thresh=0.5, p_eps=0.0000000001, transition_matrix=None, remove_rev=False, theoretical_match=True,
            log_fold_change=False, return_models=True, verbose=True, set_IntFeasTol=0.0000000001,
            weight_thresh=0.00000001, verify=True, round_states=True):
     """MADE: Metabolic Adjustment by Differential Expression.
 
 
-
-    :param cobra_model: An object of cobra.Model class. pyMADE also accepts a list of models for each condition
+    :param cobra_model: An object of cobra.Model class. pyMADE also accepts a list of cobra_models for each condition
     :param fold_change: An object of pandas.DataFrame class or object that can be converted to one. Measured fold change from expression data.  Columns correspond to conditions, rows correspond to genes.
     :param pvals: An object of pandas.DataFrame class or object that can be converted to one. P-values for changes.  Format is the same as for fold_change.
     :param gene_names: Cell array of names for genes in expression dataset. These correspond to the rows in fold_change and pvals. If none is given, the rows correspond to cobra.Model.genes.
@@ -88,3 +91,9 @@ def pyMADE(cobra_model, fold_change, pvals=None, gene_names, obj_frac=0.3, weigh
                 "The provided pvals object cannot be converted to the object of pandas.DataFrame class.")
 
     print("The dataset includes" + ntrans + "transitions between" + ncond + "conditions")
+
+    if isinstance(cobra_model, list): #check if multiple models were provided
+        assert len(cobra_model) == ncond, "Number of models does not match number of conditions"
+        models = cobra_model
+    else: #if just one - replicate it
+        models = [cobra_model for x in range(ncond)]
