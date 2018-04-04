@@ -1,5 +1,6 @@
 # reading data for testing
 import pandas as pd
+import numpy as np
 
 df = pd.read_csv('/home/mstolarczyk/Uczelnia/UVA/pyMADE/testData.csv', header=None, index_col=0,
                  names=['gene_name', 'logFC', 'p_value'], skiprows=1)
@@ -13,7 +14,7 @@ pvals = p_value
 from cobra import __version__ as cobra_version
 
 
-def pyMADE(cobra_model, fold_change, pvals, gene_names, obj_frac=0.3, weighting="log", bounds=None, objs=None,
+def pyMADE(cobra_model, fold_change, pvals=None, gene_names, obj_frac=0.3, weighting="log", bounds=None, objs=None,
            p_thresh=0.5, p_eps=0.0000000001, transition_matrix=None, remove_rev=False, theoretical_match=True,
            log_fold_change=False, return_models=True, verbose=True, set_IntFeasTol=0.0000000001,
            weight_thresh=0.00000001, verify=True, round_states=True):
@@ -75,9 +76,15 @@ def pyMADE(cobra_model, fold_change, pvals, gene_names, obj_frac=0.3, weighting=
                   pd.DataFrame):  # check if the fold_change is an object of pandas.DataFrame class and convert it to on if needed
         assert pvals.shape == fold_change.shape, "fold_change and pavals must have the same dimensions."
     else:
+        if isinstance(pvals,type(None)):
+            pvals = pd.DataFrame(np.ones((fold_change.shape[0], fold_change.shape[1])))
+            pvals.index = fold_change.index
+            weighting = 'none'
+            print("No P-values given; applying unit weighting.\n")
         try:
             pvals = pd.DataFrame(pvals)
         except ValueError:
             raise ValueError(
                 "The provided pvals object cannot be converted to the object of pandas.DataFrame class.")
 
+    print("The dataset includes" + ntrans + "transitions between" + ncond + "conditions")
