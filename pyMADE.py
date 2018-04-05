@@ -1,10 +1,10 @@
 # reading data for testing
-from cobra
+import cobra
 import numpy as np
 import pandas as pd
 
 
-
+cobra_model = cobra.io.read_sbml_model("/home/mstolarczyk/Uczelnia/UVA/iPfal17_curation/output/curated_model_2018_02_27_13:04:25.xml")
 df = pd.read_csv('/home/mstolarczyk/Uczelnia/UVA/pyMADE/testData.csv', header=None, index_col=0,
                  names=['gene_name', 'logFC', 'p_value'], skiprows=1)
 logFC = df[['logFC']]
@@ -13,7 +13,7 @@ p_value = df[['p_value']]
 fold_change = logFC
 pvals = p_value
 
-# actual function
+# The actual function
 import cobra
 import numpy as np
 import pandas as pd
@@ -57,7 +57,7 @@ def pyMADE(cobra_model, fold_change, gene_names, pvals=None, obj_frac=0.3, weigh
     if isinstance(transition_matrix, type(None)):  # check if transition_matrix was provided
         if isinstance(fold_change,
                       pd.DataFrame):  # check if the fold_change is an object of pandas.DataFrame class and convert it to on if needed
-            ntrans = fold_change.shape  # get the number of transitions
+            ntrans = fold_change.shape[1]  # get the number of transitions
         else:
             try:
                 fold_change = pd.DataFrame(fold_change)
@@ -90,10 +90,13 @@ def pyMADE(cobra_model, fold_change, gene_names, pvals=None, obj_frac=0.3, weigh
             raise ValueError(
                 "The provided pvals object cannot be converted to the object of pandas.DataFrame class.")
 
-    print("The dataset includes" + ntrans + "transitions between" + ncond + "conditions")
+    print("The dataset includes " + str(ntrans) + " transitions between " + str(ncond) + " conditions.")
 
     if isinstance(cobra_model, list): #check if multiple models were provided
-        assert len(cobra_model) == ncond, "Number of models does not match number of conditions"
+        assert len(cobra_model) == ncond, "Number of models does not match number of conditions."
         models = cobra_model
     else: #if just one - replicate it
         models = [cobra_model for x in range(ncond)]
+
+    for i in models: #check if each input model is an object of cobra.Model class
+        assert isinstance(i, cobra.Model), "All modes have to be objects of cobra.Model class."
