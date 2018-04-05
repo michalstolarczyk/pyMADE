@@ -1,10 +1,10 @@
-# reading data for testing
+# reading and generating the data for testing
 import cobra
 import numpy as np
 import pandas as pd
 
-
-cobra_model = cobra.io.read_sbml_model("/home/mstolarczyk/Uczelnia/UVA/iPfal17_curation/output/curated_model_2018_02_27_13:04:25.xml")
+cobra_model = cobra.io.read_sbml_model(
+    "/home/mstolarczyk/Uczelnia/UVA/iPfal17_curation/output/curated_model_2018_02_27_13:04:25.xml")
 df = pd.read_csv('/home/mstolarczyk/Uczelnia/UVA/pyMADE/testData.csv', header=None, index_col=0,
                  names=['gene_name', 'logFC', 'p_value'], skiprows=1)
 logFC = df[['logFC']]
@@ -12,11 +12,22 @@ p_value = df[['p_value']]
 
 fold_change = logFC
 pvals = p_value
+transition_matrix=None
+lb_list = []
+ub_list = []
+bounds = []
+for r in cobra_model.reactions:
+    lb_list.append(r.bounds[0])
+    ub_list.append(r.bounds[1])
+bounds.append(pd.DataFrame({'lb': lb_list, 'ub': ub_list}))
+bounds.append(pd.DataFrame({'lb': lb_list, 'ub': ub_list}))
+del lb_list, ub_list
 
 # The actual function
 import cobra
 import numpy as np
 import pandas as pd
+
 
 def pyMADE(cobra_model, fold_change, gene_names, pvals=None, obj_frac=0.3, weighting="log", bounds=None, objs=None,
            p_thresh=0.5, p_eps=0.0000000001, transition_matrix=None, remove_rev=False, theoretical_match=True,
@@ -36,7 +47,8 @@ def pyMADE(cobra_model, fold_change, gene_names, pvals=None, obj_frac=0.3, weigh
                  'unit'    w(p) = 1
                  'none'    No transformation -- PVALS are weights and
                              FOLD_CHANGE is a direction matrix
-    :param bounds: Structure array of condition-specific bounds.  For example, BOUNDS{i}.lb and BOUNDS{i}.ub are the lower and upper bounds for the ith condition.  If not specified, the bounds from MODEL are copied to each condition
+    :param bounds: List of objects of pandas.DataFrame class with two columns ('lb','up') and length and order corresponding to length and order of reactions in cobra_model. The number of objects must be equal the number of conditions. For example, bounds=[pd.DataFrame({'lb': lbi_list, 'ub': ubi_list})
+,pd.DataFrame({'lb': lbj_list, 'ub': ubj_list})] are the lower and upper bounds for the ith and jth condition, respectively. If not specified, the bounds from cobra_model are copied to each condition
     :param objs: Cell array of condition-specific objectives.  If not specified, the objective MODEL.c is copied to each condition.
     :param p_thresh: Threshold above which a P-value is not considered significant.  If a gene increases with a P-value p > P_THRESH, then it will be held constant with P-value 1 - p.  The default is 0.5.
     :param p_eps: P-values below P_EPS are considered equal to P_EPS.  This is used with log weighting to avoid taking the logarithm of very small P-values.  The default is 1e-10.
@@ -79,7 +91,7 @@ def pyMADE(cobra_model, fold_change, gene_names, pvals=None, obj_frac=0.3, weigh
                   pd.DataFrame):  # check if the fold_change is an object of pandas.DataFrame class and convert it to on if needed
         assert pvals.shape == fold_change.shape, "fold_change and pavals must have the same dimensions."
     else:
-        if isinstance(pvals,type(None)):
+        if isinstance(pvals, type(None)):
             pvals = pd.DataFrame(np.ones((fold_change.shape[0], fold_change.shape[1])))
             pvals.index = fold_change.index
             weighting = 'none'
@@ -92,11 +104,20 @@ def pyMADE(cobra_model, fold_change, gene_names, pvals=None, obj_frac=0.3, weigh
 
     print("The dataset includes " + str(ntrans) + " transitions between " + str(ncond) + " conditions.")
 
-    if isinstance(cobra_model, list): #check if multiple models were provided
+    if isinstance(cobra_model, list):  # check if multiple models were provided
         assert len(cobra_model) == ncond, "Number of models does not match number of conditions."
         models = cobra_model
-    else: #if just one - replicate it
+    else:  # if just one - replicate it
         models = [cobra_model for x in range(ncond)]
 
-    for i in models: #check if each input model is an object of cobra.Model class
+    for i in models:  # check if each input model is an object of cobra.Model class
         assert isinstance(i, cobra.Model), "All modes have to be objects of cobra.Model class."
+
+    if isinstance(bounds, type(None)):
+        pass # keep the original models bounds
+    else:
+        assert len(bounds) == ncond, "Number of bounds holding objects must match the number of conditions."
+        for i in range(len(models)):
+            assert len(models[i].reactions) == bounds[i].shape[0], "Number of bounds within bounds holding object must match number of reactions in the model."
+            for j in range(len(models[i].reactions)):
+                models[i].reactions[j].bounds = tuple(bounds[i].iloc[j, :])
