@@ -13,6 +13,7 @@ p_value = df[['p_value']]
 fold_change = logFC
 pvals = p_value
 transition_matrix = None
+obj_frac = 0.5
 lb_list = []
 ub_list = []
 bounds = []
@@ -45,7 +46,7 @@ def pyMADE(cobra_model, fold_change, gene_names, pvals=None, obj_frac=0.3, weigh
     :param fold_change: An object of pandas.DataFrame class or object that can be converted to one. Measured fold change from expression data.  Columns correspond to conditions, rows correspond to genes.
     :param pvals: An object of pandas.DataFrame class or object that can be converted to one. P-values for changes.  Format is the same as for fold_change.
     :param gene_names: Cell array of names for genes in expression dataset. These correspond to the rows in fold_change and pvals. If none is given, the rows correspond to cobra.Model.genes.
-    :param obj_frac: Fraction of metabolic objective required in the resulting model (v_obj >= frac*v_obj_max). Default is 0.3.  Input can also be a vector giving a separate fraction for each condition.
+    :param obj_frac: Fraction of metabolic objective required in the resulting model (v_obj >= frac*v_obj_max). Default is 0.3.  Input can also be a list giving a separate fraction for each condition.
     :param weighting:  Method to convert PVALS to weights.  Options include:
                  'log'     w(p) = -log(p)    (default)
                  'linear'  w(p) = 1 - p
@@ -114,7 +115,7 @@ def pyMADE(cobra_model, fold_change, gene_names, pvals=None, obj_frac=0.3, weigh
         assert len(cobra_model) == ncond, "Number of models does not match number of conditions."
         models = cobra_model
     else:  # if just one - replicate it
-        models = [cobra_model for x in range(ncond)]
+        models = [cobra_model] * ncond
 
     for i in models:  # check if each input model is an object of cobra.Model class
         assert isinstance(i, cobra.Model), "All modes have to be objects of cobra.Model class."
@@ -137,3 +138,8 @@ def pyMADE(cobra_model, fold_change, gene_names, pvals=None, obj_frac=0.3, weigh
             assert len(models[i].reactions) == len(objs[i]), "Number of bounds within bounds holding object must match number of reactions in the model."
             for j in range(len(models[i].reactions)):
                 models[i].reactions[j].objective_coefficient = objs[i][j]
+
+    frac = obj_frac
+    if len(obj_frac) == 1:  # set growth fraction for each condition if it was not specified
+        frac = [obj_frac] * ncond
+    assert len(frac) == ncond, "Number of objective fraction elements has to be equal the number of conditions."
