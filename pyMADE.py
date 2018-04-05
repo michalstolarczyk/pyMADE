@@ -12,7 +12,7 @@ p_value = df[['p_value']]
 
 fold_change = logFC
 pvals = p_value
-transition_matrix=None
+transition_matrix = None
 lb_list = []
 ub_list = []
 bounds = []
@@ -22,6 +22,11 @@ for r in cobra_model.reactions:
 bounds.append(pd.DataFrame({'lb': lb_list, 'ub': ub_list}))
 bounds.append(pd.DataFrame({'lb': lb_list, 'ub': ub_list}))
 del lb_list, ub_list
+
+objs = []
+objs_inner = [rxn.objective_coefficient for rxn in cobra_model.reactions]
+objs.append(objs_inner)
+objs.append(objs_inner)
 
 # The actual function
 import cobra
@@ -49,7 +54,8 @@ def pyMADE(cobra_model, fold_change, gene_names, pvals=None, obj_frac=0.3, weigh
                              FOLD_CHANGE is a direction matrix
     :param bounds: List of objects of pandas.DataFrame class with two columns ('lb','up') and length and order corresponding to length and order of reactions in cobra_model. The number of objects must be equal the number of conditions. For example, bounds=[pd.DataFrame({'lb': lbi_list, 'ub': ubi_list})
 ,pd.DataFrame({'lb': lbj_list, 'ub': ubj_list})] are the lower and upper bounds for the ith and jth condition, respectively. If not specified, the bounds from cobra_model are copied to each condition
-    :param objs: Cell array of condition-specific objectives.  If not specified, the objective MODEL.c is copied to each condition.
+    :param objs: List of lists with condition-specific objectives. Each inner list must be of length equal to number of reactions and consist of 0 or 1 only, representing non-obective or objective reaction, respectively. The number of outer list elements (inner lists) must be equal the number of conditions. If not specified, the objectives coefficients from cobra.Reaction.obejctive_vcoefficient are copied.
+ is copied to each condition.
     :param p_thresh: Threshold above which a P-value is not considered significant.  If a gene increases with a P-value p > P_THRESH, then it will be held constant with P-value 1 - p.  The default is 0.5.
     :param p_eps: P-values below P_EPS are considered equal to P_EPS.  This is used with log weighting to avoid taking the logarithm of very small P-values.  The default is 1e-10.
     :param transition_matrix:  A matrix (T) describing the interaction between conditions.  If T(i,j) = k, then the kth column in FOLD_CHANGE describes the change in expression between condition i to condition j.  If not given, FOLD_CHANGE assumes 1 -> 2, 2 -> 3, ..., n-1 -> n.
@@ -114,10 +120,20 @@ def pyMADE(cobra_model, fold_change, gene_names, pvals=None, obj_frac=0.3, weigh
         assert isinstance(i, cobra.Model), "All modes have to be objects of cobra.Model class."
 
     if isinstance(bounds, type(None)):
-        pass # keep the original models bounds
+        pass  # keep the original models bounds
     else:
         assert len(bounds) == ncond, "Number of bounds holding objects must match the number of conditions."
         for i in range(len(models)):
-            assert len(models[i].reactions) == bounds[i].shape[0], "Number of bounds within bounds holding object must match number of reactions in the model."
+            assert len(models[i].reactions) == bounds[i].shape[
+                0], "Number of bounds within bounds holding object must match number of reactions in the model."
             for j in range(len(models[i].reactions)):
                 models[i].reactions[j].bounds = tuple(bounds[i].iloc[j, :])
+
+    if isinstance(objs, type(None)):
+        pass  # keep the original models objectives
+    else:
+        assert len(objs) == ncond, "Number of objectives holding objects must match the number of conditions."
+        for i in range(len(models)):
+            assert len(models[i].reactions) == len(objs[i]), "Number of bounds within bounds holding object must match number of reactions in the model."
+            for j in range(len(models[i].reactions)):
+                models[i].reactions[j].objective_coefficient = objs[i][j]
